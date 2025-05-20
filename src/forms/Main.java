@@ -4,6 +4,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 public class Main {
     private static final int WINDOW_WIDTH = 1280;
@@ -44,8 +48,46 @@ public class Main {
 
     private int energy = 0;
     private int wellness = 100;
+    private String playerName;
+
+    private void showIntroDialog() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+
+        JTextArea instructions = new JTextArea(
+                "OBJETIVO:\nRecoge comida y llena el medidor de energía al 100\n" +
+                        "antes de que se agote el confort.\n\n" +
+                        "¡Cuidado! Los cuervos hacen que el confort disminuya más rápido.\n" +
+                        "Atrápalos para evitar que te perjudiquen.\n" +
+                        "\n¡Tu puntuación final será el confort restante al acabar la partida!");
+        instructions.setEditable(false);
+        instructions.setFont(new Font("Arial", Font.PLAIN, 14));
+        instructions.setBackground(null);
+        instructions.setBorder(null);
+
+        JTextField nameField = new JTextField(15);
+
+        JPanel inputPanel = new JPanel(new BorderLayout());
+        inputPanel.add(new JLabel("Introduce tu nombre:"), BorderLayout.NORTH);
+        inputPanel.add(nameField, BorderLayout.CENTER);
+
+        panel.add(instructions, BorderLayout.NORTH);
+        panel.add(inputPanel, BorderLayout.SOUTH);
+
+        int result;
+        do {
+            result = JOptionPane.showConfirmDialog(null, panel, "Bienvenido a HappyCow",
+                    JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+            playerName = nameField.getText().trim();
+        } while (result == JOptionPane.OK_OPTION && playerName.isEmpty());
+
+        if (result != JOptionPane.OK_OPTION) {
+            System.exit(0);  //Cierra si se cancela
+        }
+    }
 
     public Main() {
+        showIntroDialog();
         panelMain = new JPanel(null);
         panelMain.setPreferredSize(new Dimension(WINDOW_WIDTH, WINDOW_HEIGHT));
         panelMain.setFocusable(true);
@@ -300,13 +342,18 @@ public class Main {
             if (energy >= 100) {
                 timer.stop();
                 wellnessTimer.stop();
-                int option = JOptionPane.showConfirmDialog(null,
-                        "¡Felicidades! Tu vaca está llena de energía.\n¿Quieres volver a jugar?",
-                        "VICTORIA",
-                        JOptionPane.YES_NO_OPTION);
+                saveScore(playerName, wellness);
 
-                if (option == JOptionPane.YES_OPTION) restartGame();
-                else System.exit(0);
+                int option = JOptionPane.showConfirmDialog(null,
+                        "¡Felicidades " + playerName + "! Tu vaca está llena de energía.\n" +
+                                "Confort restante: " + wellness + "\n¿Quieres volver a jugar?",
+                        "Victoria", JOptionPane.YES_NO_OPTION);
+
+                if (option == JOptionPane.YES_OPTION) {
+                    restartGame();
+                } else {
+                    System.exit(0);
+                }
             }
         }
 
@@ -331,6 +378,38 @@ public class Main {
         spawnItem("food");
         timer.start();
         wellnessTimer.start();
+    }
+
+    private void saveScore(String name, int wellnessLeft) {
+        String sql = "INSERT INTO scores(player_name, comfort_remaining) VALUES(?, ?)";
+
+        try (Connection conn = connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setInt(2, wellnessLeft);
+            pstmt.executeUpdate();
+            System.out.println("Dades guardades correctament a MySQL.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static Connection connect() {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            String url = "jdbc:mysql://localhost:3306/happycow_db";
+            String user = "root";
+            String password = "mysql";
+            return DriverManager.getConnection(url, user, password);
+        } catch (ClassNotFoundException e) {
+            System.out.println("Driver MySQL no trobat.");
+            e.printStackTrace();
+        } catch (SQLException e) {
+            System.out.println("Error de connexió: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public static void main(String[] args) {
