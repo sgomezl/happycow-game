@@ -55,10 +55,10 @@ public class Main {
 
         JTextArea instructions = new JTextArea(
                 "OBJETIVO:\nRecoge comida y llena el medidor de energía al 100\n" +
-                        "antes de que se agote el tiempo (medidor de confort).\n\n" +
+                        "antes de que se agote el confort.\n\n" +
                         "¡Cuidado! Los cuervos hacen que el confort disminuya más rápido.\n" +
                         "Atrápalos para evitar que te perjudiquen.\n" +
-                        "Tu puntuación final será el confort restante al terminar el juego.\n");
+                        "\n¡Tu puntuación final será el confort restante al acabar la partida!");
         instructions.setEditable(false);
         instructions.setFont(new Font("Arial", Font.PLAIN, 14));
         instructions.setBackground(null);
@@ -67,7 +67,7 @@ public class Main {
         JTextField nameField = new JTextField(15);
 
         JPanel inputPanel = new JPanel(new BorderLayout());
-        inputPanel.add(new JLabel("Introduce tu nombre: "), BorderLayout.NORTH);
+        inputPanel.add(new JLabel("Introduce tu nombre:"), BorderLayout.NORTH);
         inputPanel.add(nameField, BorderLayout.CENTER);
 
         panel.add(instructions, BorderLayout.NORTH);
@@ -81,7 +81,9 @@ public class Main {
             playerName = nameField.getText().trim();
         } while (result == JOptionPane.OK_OPTION && playerName.isEmpty());
 
-        if (result != JOptionPane.OK_OPTION) System.exit(0);  // Cierra si se cancela
+        if (result != JOptionPane.OK_OPTION) {
+            System.exit(0);  //Cierra si se cancela
+        }
     }
 
     public Main() {
@@ -119,7 +121,7 @@ public class Main {
                 g.setColor(Color.BLACK);
                 g.setFont(new Font("Arial", Font.BOLD, 20));
                 g.drawString("Energía: " + energy, 30, 45);
-                g.drawString("Confort: " + wellness, 30, 80);
+                g.drawString("Comfort: " + wellness, 30, 80);
             }
         };
         panelGame.setBounds(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -340,7 +342,6 @@ public class Main {
             if (energy >= 100) {
                 timer.stop();
                 wellnessTimer.stop();
-
                 saveScore(playerName, wellness);
 
                 int option = JOptionPane.showConfirmDialog(null,
@@ -362,22 +363,6 @@ public class Main {
         }
     }
 
-    private void saveScore(String name, int wellnessLeft) {
-        String sql = "INSERT INTO scores(player_name, comfort_remaining) VALUES(?, ?)";
-
-        try (Connection conn = connect();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, name);
-            pstmt.setInt(2, wellnessLeft);
-            pstmt.executeUpdate();
-            System.out.println("Dades guardades correctament a MySQL.");
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
     private boolean collides(Point itemPos) {
         return cowX + PLAYER_SIZE > itemPos.x && cowX < itemPos.x + ITEM_WIDTH &&
                 cowY + PLAYER_SIZE > itemPos.y && cowY < itemPos.y + ITEM_HEIGHT;
@@ -395,23 +380,36 @@ public class Main {
         wellnessTimer.start();
     }
 
-    private Connection connect() {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            System.out.println("Driver MySQL no trobat.");
+    private void saveScore(String name, int wellnessLeft) {
+        String sql = "INSERT INTO scores(player_name, comfort_remaining) VALUES(?, ?)";
+
+        try (Connection conn = connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setInt(2, wellnessLeft);
+            pstmt.executeUpdate();
+            System.out.println("Dades guardades correctament a MySQL.");
+        } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+
+    public static Connection connect() {
         try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
             String url = "jdbc:mysql://localhost:3306/happycow_db";
             String user = "root";
             String password = "mysql";
             return DriverManager.getConnection(url, user, password);
-        } catch (SQLException e) {
+        } catch (ClassNotFoundException e) {
+            System.out.println("Driver MySQL no trobat.");
             e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error de connexió amb la base de dades.");
-            return null;
+        } catch (SQLException e) {
+            System.out.println("Error de connexió: " + e.getMessage());
+            e.printStackTrace();
         }
+        return null;
     }
 
     public static void main(String[] args) {
