@@ -154,7 +154,6 @@ public class Main {
 
         });
         timer.start();
-
         wellnessTimer = new Timer(1000, e -> {
             if (wellness > 0) {
                 wellness -= crowVisible ? 3 : 1;
@@ -163,7 +162,11 @@ public class Main {
             if (wellness == 0) {
                 timer.stop();
                 wellnessTimer.stop();
-                JOptionPane.showMessageDialog(null, "Game Over: Tu vaca ha perdido el confort.");
+                int optionGameOver = JOptionPane.showConfirmDialog(null,
+                        "Game Over: Tu vaca ha perdido el confort." + "\n¿Quieres volver a intentarlo?",
+                        "GAME OVER", JOptionPane.YES_NO_OPTION);
+                if (optionGameOver == JOptionPane.YES_OPTION) restartGame();
+                else System.exit(0);
             }
         });
         wellnessTimer.start();
@@ -338,22 +341,17 @@ public class Main {
             foodVisible = false;
             foodPosition = null;
             energy += 5;
-
             if (energy >= 100) {
                 timer.stop();
                 wellnessTimer.stop();
                 saveScore(playerName, wellness);
-
-                int option = JOptionPane.showConfirmDialog(null,
+                int optionVictory = JOptionPane.showConfirmDialog(null,
                         "¡Felicidades " + playerName + "! Tu vaca está llena de energía.\n" +
                                 "Confort restante: " + wellness + "\n¿Quieres volver a jugar?",
                         "Victoria", JOptionPane.YES_NO_OPTION);
 
-                if (option == JOptionPane.YES_OPTION) {
-                    restartGame();
-                } else {
-                    System.exit(0);
-                }
+                if (optionVictory == JOptionPane.YES_OPTION) restartGame();
+                else System.exit(0);
             }
         }
 
@@ -375,6 +373,7 @@ public class Main {
         wellness = 100;
         foodVisible = false;
         crowVisible = false;
+        up = down = left = right = false; //si no pongo esto el personaje no deja de moverse al reiniciar partida
         spawnItem("food");
         timer.start();
         wellnessTimer.start();
@@ -393,7 +392,6 @@ public class Main {
             e.printStackTrace();
         }
     }
-
 
     public static Connection connect() {
         try {
